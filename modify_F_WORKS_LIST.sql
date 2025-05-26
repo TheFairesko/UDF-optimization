@@ -5,10 +5,24 @@ GO
 
 CREATE FUNCTION [dbo].[F_WORKS_LIST] (
 )
-RETURNS TABLE
-AS
-RETURN
+RETURNS @RESULT TABLE
 (
+    ID_WORK INT,
+    CREATE_Date DATETIME,
+    MaterialNumber DECIMAL(8,2),
+    IS_Complit BIT,
+    FIO VARCHAR(255),
+    D_DATE varchar(10),
+    WorkItemsNotComplit int,
+    WorkItemsComplit int,
+    FULL_NAME VARCHAR(101),
+    StatusId smallint,
+    StatusName VARCHAR(255),
+    Is_Print bit
+)
+AS
+BEGIN
+    -- CTE для подсчета WorkItems
     WITH WorkItemsCounts AS (
         SELECT 
             wi.Id_Work,
@@ -19,7 +33,20 @@ RETURN
         INNER JOIN Analiz a ON wi.Id_Analiz = a.Id_Analiz
         GROUP BY 
             wi.Id_Work
+    ),
+    
+    -- CTE для получения полных имен сотрудников
+    EmployeeFullNames AS (
+        SELECT 
+            e.Id_Employee,
+            ISNULL(RTRIM(e.Surname + ' ' + UPPER(SUBSTRING(e.Name, 1, 1)) + '. ' + 
+                   UPPER(SUBSTRING(e.Patronymic, 1, 1)) + '.'), 
+                   e.Login_Name) AS FULL_NAME
+        FROM 
+            Employee e
     )
+
+    INSERT INTO @RESULT
     SELECT
         w.Id_Work,
         w.CREATE_Date,
@@ -41,12 +68,16 @@ RETURN
             THEN 1
             ELSE 0
         END AS Is_Print
-    FROM 
+    FROM
         Works w
-    LEFT JOIN WorkStatus ws ON w.StatusId = ws.StatusID
-    LEFT JOIN WorkItemsCounts wic ON w.Id_Work = wic.Id_Work
-    OUTER APPLY dbo.F_EMPLOYEE_FULLNAME(w.Id_Employee) efn
-    WHERE 
+    LEFT OUTER JOIN WorkItemsCounts wic ON w.Id_Work = wic.Id_Work
+    LEFT OUTER JOIN WorkStatus ws ON w.StatusId = ws.StatusID
+    LEFT OUTER JOIN EmployeeFullNames efn ON w.Id_Employee = efn.Id_Employee
+    WHERE
         w.IS_DEL <> 1
-)
+    ORDER BY 
+        w.Id_Work DESC
+    
+    RETURN
+END
 GO

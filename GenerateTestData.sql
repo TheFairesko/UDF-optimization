@@ -15,7 +15,7 @@ SELECT
     n.Name,
     p.Patronymic,
     s.Surname,
-    LOWER(s.Surname + '.' + n.Name + '@example.com') AS Email,
+    LOWER(s.Surname + '.' + n.Name + nums.rn + '@example.com') AS Email,
     'Лаборант' AS Post,
     DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 730), GETDATE()) AS CreateDate,
     0 AS Archived,
